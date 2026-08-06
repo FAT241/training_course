@@ -31,9 +31,19 @@ const getById = async (req, res) => {
                 }
             })
         );
+
+        //Lay danh sach phan quyen
+        const permissionsResult = await pool.query(`
+            SELECT cp.*, d.department_name 
+            FROM course_permission cp 
+            JOIN department d ON cp.department_id = d.id 
+            WHERE cp.course_id = $1
+        `, [id]);
+
         res.json({
             ...course,
-            chapters: chapters
+            chapters: chapters,
+            permissions: permissionsResult.rows
         })
     } catch (err) {
         res.status(500).json({ message: 'Lỗi server', error: err.message });

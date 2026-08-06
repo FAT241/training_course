@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Trash2, Video, FileText, X, Edit } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Video, FileText, X, Edit, Building, Shield } from 'lucide-react';
 import api from '../../utils/api';
 
 export default function CourseDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
     const [course, setCourse] = useState(null);
+    const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // States for Modals
@@ -21,18 +22,60 @@ export default function CourseDetail() {
     const [chapterForm, setChapterForm] = useState({ chapter_name: '', order_index: 1 });
     const [lessonForm, setLessonForm] = useState({ lesson_name: '', content_type: 'VIDEO', file_path: '' });
 
+    // Permission states
+    const [selectedDepartmentId, setSelectedDepartmentId] = useState('');
+    const [accessLevel, setAccessLevel] = useState('RESTRICTED');
+
     useEffect(() => {
-        fetchCourseDetail();
+        fetchData();
     }, [id]);
+
+    const fetchData = async () => {
+        try {
+            const [courseRes, deptsRes] = await Promise.all([
+                api.get(`/courses/${id}`),
+                api.get('/departments')
+            ]);
+            setCourse(courseRes.data);
+            setDepartments(deptsRes.data);
+            if (deptsRes.data.length > 0) setSelectedDepartmentId(deptsRes.data[0].id);
+            setLoading(false);
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            setLoading(false);
+        }
+    };
 
     const fetchCourseDetail = async () => {
         try {
             const response = await api.get(`/courses/${id}`);
             setCourse(response.data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching course:', error);
-            setLoading(false);
+        }
+    };
+
+    // --- PERMISSION LOGIC ---
+    const handleAddPermission = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post(`/courses/${id}/permissions`, {
+                department_id: selectedDepartmentId,
+                access_level: accessLevel
+            });
+            fetchCourseDetail();
+        } catch (error) {
+            alert('Lỗi: ' + (error.response?.data?.message || error.message));
+        }
+    };
+
+    const handleRemovePermission = async (departmentId) => {
+        if (!window.confirm('Xóa quyền của phòng ban này?')) return;
+        try {
+            await api.delete(`/courses/${id}/permissions/${departmentId}`);
+            fetchCourseDetail();
+        } catch (error) {
+            alert('Lỗi: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -128,6 +171,41 @@ export default function CourseDetail() {
                 <button className="btn-primary create-btn" style={{ marginLeft: 'auto' }} onClick={openAddChapterModal}>
                     <Plus size={18} /> Thêm Chương
                 </button>
+            </div>
+
+            {/* --- COURSE PERMISSIONS SECTION --- */}
+            <div className="permissions-section" style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+                <h3 style={{ margin: '0 0 1rem 0', color: 'var(--fpt-blue)', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Shield size={18} /> Phân quyền phòng ban
+                </h3>
+                <p style={{ color: '#6B7280', fontSize: '0.9rem', marginBottom: '1rem' }}>Chỉ những phòng ban được cấp quyền dưới đây mới có thể thấy và học khóa học này.</p>
+                
+                <form onSubmit={handleAddPermission} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <select className="form-control" value={selectedDepartmentId} onChange={e => setSelectedDepartmentId(e.target.value)} style={{ width: '250px' }}>
+                        {departments.map(d => (
+                            <option key={d.id} value={d.id}>{d.department_name}</option>
+                        ))}
+                    </select>
+                    <select className="form-control" value={accessLevel} onChange={e => setAccessLevel(e.target.value)} style={{ width: '150px' }}>
+                        <option value="RESTRICTED">Bắt buộc học</option>
+                        <option value="OPTIONAL">Tùy chọn</option>
+                    </select>
+                    <button type="submit" className="btn-primary">Thêm Quyền</button>
+                </form>
+
+                <div className="permissions-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                    {course.permissions?.length === 0 && <span style={{ color: '#9CA3AF', fontSize: '0.9rem' }}>Chưa có phòng ban nào được cấp quyền.</span>}
+                    {course.permissions?.map(perm => (
+                        <div key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#F3F4F6', borderRadius: '20px', fontSize: '0.9rem' }}>
+                            <Building size={14} color="#4B5563" />
+                            <span style={{ fontWeight: '500', color: '#1F2937' }}>{perm.department_name}</span>
+                            <span style={{ color: '#6B7280', fontSize: '0.8rem' }}>({perm.access_level})</span>
+                            <button type="button" onClick={() => handleRemovePermission(perm.department_id)} style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', display: 'flex', padding: '2px' }}>
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <div className="chapters-list">
