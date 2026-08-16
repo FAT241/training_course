@@ -4,3 +4,10 @@ node_modules/
 dist/
 build/
 *.log
+
+# AI & Temp files
+.gemini/
+.agents/
+GEMINI.md
+loadtest.js
+server/fix_emails.js

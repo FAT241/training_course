@@ -109,6 +109,17 @@ const addChapter = async (req, res) => {
 const removeChapter = async (req, res) => {
     const { chapterId } = req.params;
     try {
+        // Kiểm tra xem có ai đang học dở chương này không (tức là đã làm Quiz của chương này chưa)
+        const checkResult = await pool.query(`
+            SELECT qr.id FROM quiz_result qr
+            JOIN quiz q ON qr.quiz_id = q.id
+            WHERE q.chapter_id = $1 LIMIT 1
+        `, [chapterId]);
+        
+        if (checkResult.rows.length > 0) {
+            return res.status(400).json({ message: 'Không thể xóa chương này vì đã có nhân viên tham gia học/kiểm tra.' });
+        }
+
         await pool.query('DELETE FROM chapter WHERE id = $1', [chapterId]);
         res.json({ message: 'Xóa chương thành công' });
     } catch (err) {
@@ -133,12 +144,15 @@ const updateChapter = async (req, res) => {
 
 const addLesson = async (req, res) => {
     const { chapterId } = req.params;
-    const { lesson_name, content_type, file_path } = req.body;
+    let { lesson_name, content_type, file_path } = req.body;
     try {
+        if (req.file) {
+            file_path = '/uploads/pdfs/' + req.file.filename;
+        }
         const result = await pool.query(
             `INSERT INTO lesson (chapter_id, lesson_name, content_type, file_path)
        VALUES ($1, $2, $3, $4) RETURNING *`,
-            [chapterId, lesson_name, content_type, file_path]
+            [chapterId, lesson_name, content_type, file_path || null]
         );
         res.status(201).json(result.rows[0]);
     } catch (err) {
@@ -158,11 +172,14 @@ const removeLesson = async (req, res) => {
 
 const updateLesson = async (req, res) => {
     const { lessonId } = req.params;
-    const { lesson_name, content_type, file_path } = req.body;
+    let { lesson_name, content_type, file_path } = req.body;
     try {
+        if (req.file) {
+            file_path = '/uploads/pdfs/' + req.file.filename;
+        }
         const result = await pool.query(
             'UPDATE lesson SET lesson_name=$1, content_type=$2, file_path=$3 WHERE id=$4 RETURNING *',
-            [lesson_name, content_type, file_path, lessonId]
+            [lesson_name, content_type, file_path || null, lessonId]
         );
         if (result.rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài học' });
         res.json(result.rows[0]);

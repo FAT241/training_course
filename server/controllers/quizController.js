@@ -77,4 +77,31 @@ const addAnswer = async (req, res) => {
     }
 };
 
-module.exports = { createQuiz, getQuizByChapter, addQuestion, addAnswer };
+const deleteQuestion = async (req, res) => {
+    const { questionId } = req.params;
+    try {
+        await pool.query('DELETE FROM answer WHERE question_id = $1', [questionId]);
+        await pool.query('DELETE FROM question WHERE id = $1', [questionId]);
+        res.json({ message: 'Xóa câu hỏi thành công' });
+    } catch (err) {
+        res.status(500).json({ message: 'Lỗi server', error: err.message });
+    }
+};
+
+const deleteQuiz = async (req, res) => {
+    const { quizId } = req.params;
+    try {
+        // Tìm và xóa tất cả đáp án của các câu hỏi thuộc quiz này
+        const questionsResult = await pool.query('SELECT id FROM question WHERE quiz_id = $1', [quizId]);
+        for (let q of questionsResult.rows) {
+            await pool.query('DELETE FROM answer WHERE question_id = $1', [q.id]);
+        }
+        await pool.query('DELETE FROM question WHERE quiz_id = $1', [quizId]);
+        await pool.query('DELETE FROM quiz WHERE id = $1', [quizId]);
+        res.json({ message: 'Xóa bài kiểm tra thành công' });
+    } catch (err) {
+        res.status(500).json({ message: 'Lỗi server', error: err.message });
+    }
+};
+
+module.exports = { createQuiz, getQuizByChapter, addQuestion, addAnswer, deleteQuestion, deleteQuiz };

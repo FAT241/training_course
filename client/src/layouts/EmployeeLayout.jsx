@@ -1,17 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { BookOpen, LayoutDashboard, Users, Building, LogOut, BookA, Menu, X } from 'lucide-react';
-import courseGif from '../assets/course.gif';
-import employeeGif from '../assets/employee.gif';
-import departmentGif from '../assets/department.gif';
-import overviewGif from '../assets/overview.gif';
 import fptLogo from '../assets/FPT_logo.webp';
-
-export default function AdminLayout() {
+import course from '../assets/course.gif'
+import certificate from '../assets/certificate.gif'
+import overview from '../assets/overview.gif'
+import { Menu, X, LogOut } from 'lucide-react';
+export default function EmployeeLayout() {
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState(null);
-    const [isDrawerOpen, setIsDrawerOpen] = useState(false); // Trạng thái đóng/mở Drawer
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
     useEffect(() => {
         const token = sessionStorage.getItem('token');
@@ -23,14 +21,13 @@ export default function AdminLayout() {
         }
 
         const parsedUser = JSON.parse(userData);
-        if (parsedUser.role !== 'ADMIN') {
-            navigate('/dashboard');
+        if (parsedUser.role !== 'EMPLOYEE') {
+            navigate('/admin');
             return;
         }
         setUser(parsedUser);
     }, [navigate]);
 
-    // Tự động đóng menu khi chuyển trang
     useEffect(() => {
         setIsDrawerOpen(false);
     }, [location]);
@@ -43,17 +40,16 @@ export default function AdminLayout() {
 
     const getPageTitle = () => {
         const path = location.pathname;
-        if (path.includes('/admin/courses')) return 'Quản lý Khóa học';
-        if (path.includes('/admin/employees')) return 'Quản lý Nhân viên';
-        if (path.includes('/admin/departments')) return 'Quản lý Phòng ban';
-        return 'Tổng quan Hệ thống';
+        if (path.includes('/dashboard/certificates')) return 'Chứng chỉ của tôi';
+        if (path.includes('/dashboard/courses')) return 'Chi tiết khóa học';
+        if (path.includes('/dashboard/quizzes')) return 'Bài kiểm tra';
+        return 'Khóa học của tôi';
     };
 
     if (!user) return null;
 
     return (
         <div className="admin-layout">
-            {/* Thanh Header phía trên cùng */}
             <header className="admin-topbar">
                 <div className="topbar-left">
                     <button className="hamburger-btn" onClick={() => setIsDrawerOpen(!isDrawerOpen)}>
@@ -72,7 +68,7 @@ export default function AdminLayout() {
                 <div className="topbar-right">
                     <div className="user-info text-right">
                         <span className="user-name">{user?.fullName}</span>
-                        <span className="user-role">Quản trị viên</span>
+                        <span className="user-role">{user?.position || 'Nhân viên'}</span>
                     </div>
                     <div className="user-avatar">
                         {user?.fullName?.charAt(0)}
@@ -80,46 +76,31 @@ export default function AdminLayout() {
                 </div>
             </header>
 
-            {/* Khu vực chứa Nội dung và Drawer Sidebar */}
             <div className="admin-body-container">
-                {/* Lớp phủ mờ (Overlay) khi mở menu */}
                 {isDrawerOpen && (
                     <div className="drawer-overlay" onClick={() => setIsDrawerOpen(false)}></div>
                 )}
 
-                {/* Sidebar Ngăn kéo */}
                 <aside className={`admin-drawer ${isDrawerOpen ? 'open' : ''}`}>
                     <div className="drawer-header">
-                        <span>Menu Quản Trị</span>
+                        <span>Menu Nhân Viên</span>
                         <button className="close-btn" onClick={() => setIsDrawerOpen(false)}>
                             <X size={20} />
                         </button>
                     </div>
 
                     <nav className="sidebar-nav">
-                        <NavLink to="/admin" end className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <div className="nav-icon-wrapper">
-                                <img src={overviewGif} alt="Tổng quan" style={{ width: '28px', height: '28px' }} />
+                        <NavLink to="/dashboard" end className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '12px' }}>
+                                <img src={course} alt="Khóa học" style={{ width: '24px', height: '24px' }} />
                             </div>
-                            <span className="nav-text">Tổng quan</span>
+                            <span style={{ fontWeight: '500' }}>Khóa học</span>
                         </NavLink>
-                        <NavLink to="/admin/courses" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <div className="nav-icon-wrapper">
-                                <img src={courseGif} alt="Khóa học" style={{ width: '28px', height: '28px' }} />
+                        <NavLink to="/dashboard/certificates" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+                            <div style={{ padding: '6px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '12px' }}>
+                                <img src={certificate} alt="Chứng chỉ" style={{ width: '24px', height: '24px' }} />
                             </div>
-                            <span className="nav-text">Khóa học</span>
-                        </NavLink>
-                        <NavLink to="/admin/employees" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <div className="nav-icon-wrapper">
-                                <img src={employeeGif} alt="Nhân viên" style={{ width: '28px', height: '28px' }} />
-                            </div>
-                            <span className="nav-text">Nhân viên</span>
-                        </NavLink>
-                        <NavLink to="/admin/departments" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-                            <div className="nav-icon-wrapper">
-                                <img src={departmentGif} alt="Phòng ban" style={{ width: '28px', height: '28px' }} />
-                            </div>
-                            <span className="nav-text">Phòng ban</span>
+                            <span style={{ fontWeight: '500' }}>Chứng chỉ</span>
                         </NavLink>
                     </nav>
 
@@ -130,7 +111,6 @@ export default function AdminLayout() {
                     </div>
                 </aside>
 
-                {/* Khu vực nội dung chính */}
                 <main className="admin-main-content">
                     <Outlet />
                 </main>

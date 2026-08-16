@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Plus, Edit, Trash2, Eye, X, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, X, AlertCircle, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { getCourseImage } from '../../utils/getCourseImage';
+import { SkeletonTable } from '../../components/SkeletonCard';
+import ErrorState from '../../components/ErrorState';
+import EmptyState from '../../components/EmptyState';
+import Pagination from '../../components/Pagination';
+
+const PAGE_SIZE = 10;
 
 export default function Courses() {
     const navigate = useNavigate();
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Search & Filter States
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState('ALL'); // ALL, MANDATORY, OPTIONAL
 
     // Modal States
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -20,28 +34,31 @@ export default function Courses() {
         description: '',
         course_type: 'MANDATORY'
     });
-    const [error, setError] = useState('');
+    const [formError, setFormError] = useState('');
+
+    const fetchCourses = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get('/courses');
+            setCourses(response.data);
+        } catch (err) {
+            console.error('Error fetching courses:', err);
+            setError('Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối và thử lại.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchCourses();
     }, []);
 
-    const fetchCourses = async () => {
-        try {
-            const response = await api.get('/courses');
-            setCourses(response.data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching courses:', error);
-            setLoading(false);
-        }
-    };
-
     // Mở modal tạo mới
     const openCreateModal = () => {
         setEditingCourse(null);
         setFormData({ course_name: '', description: '', course_type: 'MANDATORY' });
-        setError('');
+        setFormError('');
         setIsModalOpen(true);
     };
 
@@ -53,14 +70,14 @@ export default function Courses() {
             description: course.description,
             course_type: course.course_type
         });
-        setError('');
+        setFormError('');
         setIsModalOpen(true);
     };
 
     // Xử lý Form Submit
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        setFormError('');
         try {
             if (editingCourse) {
                 // Call API Update
@@ -71,8 +88,10 @@ export default function Courses() {
             }
             setIsModalOpen(false);
             fetchCourses(); // Tải lại danh sách
+            toast.success(editingCourse ? 'Cập nhật khóa học thành công!' : 'Tạo khóa học thành công!');
         } catch (err) {
-            setError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            setFormError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
@@ -89,13 +108,47 @@ export default function Courses() {
             setIsDeleteModalOpen(false);
             setCourseToDelete(null);
             fetchCourses();
+            toast.success('Đã xóa khóa học thành công!');
         } catch (err) {
             console.error('Lỗi xóa khóa học:', err);
-            alert('Không thể xóa khóa học này.');
+            toast.error('Không thể xóa khóa học này.');
         }
     };
 
-    if (loading) return <div>Đang tải dữ liệu...</div>;
+    if (loading) return (
+        <div className="course-list-container">
+            <div className="course-list-header"><h2>Tất cả khóa học</h2></div>
+            <div className="course-list-body"><SkeletonTable rows={6} columns={3} /></div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="course-list-container">
+            <div className="course-list-header"><h2>Tất cả khóa học</h2></div>
+            <ErrorState message={error} onRetry={fetchCourses} />
+        </div>
+    );
+
+    // Lọc dữ liệu an toàn (tránh lỗi null/undefined)
+    const filteredCourses = courses.filter(course => {
+        const nameMatch = (course.course_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const typeMatch = filterType === 'ALL' || course.course_type === filterType;
+        return nameMatch && typeMatch;
+    });
+
+    // Phân trang
+    const totalPages = Math.ceil(filteredCourses.length / PAGE_SIZE);
+    const paginatedCourses = filteredCourses.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+    const handleSearchChange = (e) => {
+        setSearchTerm(e.target.value);
+        setCurrentPage(1); // Reset về trang 1 khi search
+    };
+
+    const handleFilterChange = (e) => {
+        setFilterType(e.target.value);
+        setCurrentPage(1);
+    };
 
     return (
         <div className="course-list-container">
@@ -104,11 +157,23 @@ export default function Courses() {
                 <div className="course-actions">
                     <div className="search-bar-container">
                         <Search size={18} className="search-icon" />
-                        <input type="text" placeholder="Tìm kiếm..." />
+                        <input 
+                            type="text" 
+                            placeholder="Tìm kiếm..." 
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                        />
                     </div>
-                    <button className="filter-btn">
-                        <Filter size={18} />
-                    </button>
+                    <select 
+                        className="form-control" 
+                        style={{ width: 'auto', padding: '0.5rem', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', background: 'rgba(30, 41, 59, 0.7)', color: 'white' }}
+                        value={filterType}
+                        onChange={handleFilterChange}
+                    >
+                        <option value="ALL">Tất cả loại</option>
+                        <option value="MANDATORY">Bắt buộc</option>
+                        <option value="OPTIONAL">Tùy chọn</option>
+                    </select>
                     <button className="btn-primary create-btn" onClick={openCreateModal}>
                         <Plus size={18} /> Tạo mới
                     </button>
@@ -122,17 +187,24 @@ export default function Courses() {
                     <span className="label-status">Thao tác</span>
                 </div>
 
-                {courses.length === 0 && (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                        Chưa có khóa học nào.
-                    </div>
-                )}
-
-                {courses.map(course => (
+                {paginatedCourses.length === 0 ? (
+                    <EmptyState
+                        icon={BookOpen}
+                        title={searchTerm || filterType !== 'ALL' ? 'Không tìm thấy kết quả' : 'Chưa có khóa học nào'}
+                        description={searchTerm || filterType !== 'ALL' ? 'Thử thay đổi từ khóa hoặc bộ lọc.' : 'Hãy tạo khóa học đầu tiên để bắt đầu!'}
+                        actionText={!searchTerm && filterType === 'ALL' ? '+ Tạo khóa học' : undefined}
+                        onAction={!searchTerm && filterType === 'ALL' ? openCreateModal : undefined}
+                    />
+                ) : (
+                    paginatedCourses.map(course => (
                     <div key={course.id} className="course-row-card">
                         <div className="course-info">
-                            <div className="course-thumbnail">
-                                <img src={`https://ui-avatars.com/api/?name=${encodeURIComponent(course.course_name)}&background=random`} alt="thumbnail" />
+                            <div className="course-thumbnail" style={{ width: '80px', height: '50px', borderRadius: '8px', overflow: 'hidden' }}>
+                                <img 
+                                    src={getCourseImage(course.course_name)} 
+                                    alt="thumbnail" 
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                />
                             </div>
                             <span className="course-title">{course.course_name}</span>
                         </div>
@@ -155,7 +227,13 @@ export default function Courses() {
                             </button>
                         </div>
                     </div>
-                ))}
+                    ))
+                )}
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* Modal Thêm/Sửa */}
@@ -170,7 +248,7 @@ export default function Courses() {
                         </div>
                         <form onSubmit={handleSubmit}>
                             <div className="modal-body">
-                                {error && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                                {formError && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>{formError}</div>}
                                 
                                 <div className="form-group">
                                     <label>Tên khóa học</label>

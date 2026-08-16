@@ -48,12 +48,21 @@ const create = async (req, res) => {
 
 const update = async (req, res) => {
     const { id } = req.params;
-    const { full_name, department_id, rank } = req.body;
+    const { full_name, department_id, rank, password } = req.body;
     try {
-        await pool.query(
-            `UPDATE users SET full_name = $1 WHERE id = $2`,
-            [full_name, id]
-        );
+        if (password) {
+            const bcrypt = require('bcrypt');
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await pool.query(
+                `UPDATE users SET full_name = $1, password = $2 WHERE id = $3`,
+                [full_name, hashedPassword, id]
+            );
+        } else {
+            await pool.query(
+                `UPDATE users SET full_name = $1 WHERE id = $2`,
+                [full_name, id]
+            );
+        }
         await pool.query(
             `UPDATE employee SET department_id = $1, rank = $2 WHERE user_id = $3`,
             [department_id, rank, id]

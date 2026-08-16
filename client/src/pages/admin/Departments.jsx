@@ -1,52 +1,63 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Edit, Trash2, X, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, X, AlertCircle, Building2 } from 'lucide-react';
+import toast from 'react-hot-toast';
 import api from '../../utils/api';
+import { SkeletonTable } from '../../components/SkeletonCard';
+import ErrorState from '../../components/ErrorState';
+import EmptyState from '../../components/EmptyState';
 
 export default function Departments() {
     const [departments, setDepartments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [formError, setFormError] = useState('');
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    
+    // Search State
+    const [searchTerm, setSearchTerm] = useState('');
     
     const [editingDept, setEditingDept] = useState(null);
     const [deptToDelete, setDeptToDelete] = useState(null);
     
     const [formData, setFormData] = useState({ department_name: '' });
-    const [error, setError] = useState('');
+
+    const fetchDepartments = async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const response = await api.get('/departments');
+            setDepartments(response.data);
+        } catch (err) {
+            console.error('Error fetching data:', err);
+            setError('Không thể kết nối tới máy chủ. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetchDepartments();
     }, []);
 
-    const fetchDepartments = async () => {
-        try {
-            const response = await api.get('/departments');
-            setDepartments(response.data);
-            setLoading(false);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            setLoading(false);
-        }
-    };
-
     const openCreateModal = () => {
         setEditingDept(null);
         setFormData({ department_name: '' });
-        setError('');
+        setFormError('');
         setIsModalOpen(true);
     };
 
     const openEditModal = (dept) => {
         setEditingDept(dept);
         setFormData({ department_name: dept.department_name });
-        setError('');
+        setFormError('');
         setIsModalOpen(true);
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setError('');
+        setFormError('');
         try {
             if (editingDept) {
                 await api.put(`/departments/${editingDept.id}`, formData);
@@ -55,8 +66,10 @@ export default function Departments() {
             }
             setIsModalOpen(false);
             fetchDepartments();
+            toast.success(editingDept ? 'Cập nhật thành công!' : 'Thêm phòng ban thành công!');
         } catch (err) {
-            setError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            setFormError(err.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.');
+            toast.error(err.response?.data?.message || 'Có lỗi xảy ra');
         }
     };
 
@@ -71,12 +84,30 @@ export default function Departments() {
             setIsDeleteModalOpen(false);
             setDeptToDelete(null);
             fetchDepartments();
+            toast.success('Xóa phòng ban thành công!');
         } catch (err) {
-            alert(err.response?.data?.message || 'Không thể xóa phòng ban này.');
+            toast.error(err.response?.data?.message || 'Không thể xóa phòng ban này.');
         }
     };
 
-    if (loading) return <div>Đang tải dữ liệu...</div>;
+    if (loading) return (
+        <div className="course-list-container">
+            <div className="course-list-header"><h2>Quản lý Phòng ban</h2></div>
+            <div className="course-list-body"><SkeletonTable rows={5} columns={3} /></div>
+        </div>
+    );
+
+    if (error) return (
+        <div className="course-list-container">
+            <div className="course-list-header"><h2>Quản lý Phòng ban</h2></div>
+            <ErrorState message={error} onRetry={fetchDepartments} />
+        </div>
+    );
+
+    // Lọc dữ liệu an toàn
+    const filteredDepartments = departments.filter(dept => 
+        (dept.department_name || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     return (
         <div className="course-list-container">
@@ -85,7 +116,12 @@ export default function Departments() {
                 <div className="course-actions">
                     <div className="search-bar-container">
                         <Search size={18} className="search-icon" />
-                        <input type="text" placeholder="Tìm kiếm phòng ban..." />
+                        <input 
+                            type="text" 
+                            placeholder="Tìm kiếm phòng ban..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
                     <button className="btn-primary create-btn" onClick={openCreateModal}>
                         <Plus size={18} /> Thêm phòng ban
@@ -100,20 +136,23 @@ export default function Departments() {
                     <span className="label-status">Thao tác</span>
                 </div>
 
-                {departments.length === 0 && (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                        Chưa có phòng ban nào.
-                    </div>
-                )}
-
-                {departments.map(dept => (
+                {filteredDepartments.length === 0 ? (
+                    <EmptyState
+                        icon={Building2}
+                        title={searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có phòng ban nào'}
+                        description={searchTerm ? 'Thử thay đổi từ khóa.' : 'Hãy tạo phòng ban đầu tiên!'}
+                        actionText={!searchTerm ? '+ Thêm phòng ban' : undefined}
+                        onAction={!searchTerm ? openCreateModal : undefined}
+                    />
+                ) : (
+                    filteredDepartments.map(dept => (
                     <div key={dept.id} className="course-row-card" style={{ gridTemplateColumns: '1fr 3fr 1fr' }}>
                         <div className="course-info">
-                            <span style={{ fontWeight: 'bold', color: '#9CA3AF' }}>#{dept.id}</span>
+                            <span style={{ fontWeight: 'bold', color: '#94a3b8' }}>#{dept.id}</span>
                         </div>
                         
                         <div className="course-stats">
-                            <span className="course-title" style={{ fontSize: '1.05rem', color: 'var(--fpt-blue)' }}>
+                            <span className="course-title" style={{ fontSize: '1.05rem', color: 'white' }}>
                                 {dept.department_name}
                             </span>
                         </div>
@@ -127,7 +166,8 @@ export default function Departments() {
                             </button>
                         </div>
                     </div>
-                ))}
+                    ))
+                )}
             </div>
 
             {/* Modal Thêm/Sửa */}
@@ -142,7 +182,7 @@ export default function Departments() {
                         </div>
                         <form onSubmit={handleSubmit}>
                             <div className="modal-body">
-                                {error && <div style={{ color: 'red', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                                {error && <div style={{ color: '#f87171', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
                                 
                                 <div className="form-group">
                                     <label>Tên phòng ban</label>

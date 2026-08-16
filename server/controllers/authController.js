@@ -29,13 +29,22 @@ const login = async (req, res) => {
     process.env.JWT_SECRET,
     { expiresIn: '8h' }
   );
+  let position = null;
+  if (user.role === 'EMPLOYEE') {
+    const empResult = await pool.query('SELECT rank FROM employee WHERE user_id = $1', [user.id]);
+    if (empResult.rows.length > 0) {
+      position = empResult.rows[0].rank;
+    }
+  }
+
   res.json({
     token,
     user: {
       id: user.id,
       fullName: user.full_name,
       email: user.email,
-      role: user.role
+      role: user.role,
+      position: position
     }
   });
 

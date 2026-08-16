@@ -12,17 +12,21 @@ const employeeRoutes = require('./routes/employees');
 const courseRoutes = require('./routes/courses');
 const chapterRoutes = require('./routes/chapters');
 const statisticsRoutes = require('./routes/statistics');
+const employeeApiRoutes = require('./routes/employee');
 
 
+const path = require('path');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use('/uploads/pdfs', express.static(path.join(__dirname, 'uploads/pdfs')));
 app.use('/api/auth', authRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/chapters', chapterRoutes);
 app.use('/api/statistics', statisticsRoutes);
+app.use('/api/employee', employeeApiRoutes);
 
 
 app.get('/', (req, res) => {
