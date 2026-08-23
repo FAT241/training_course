@@ -173,6 +173,7 @@ export default function Courses() {
                         <option value="ALL">Tất cả loại</option>
                         <option value="MANDATORY">Bắt buộc</option>
                         <option value="OPTIONAL">Tùy chọn</option>
+                        <option value="PUBLIC">Công khai</option>
                     </select>
                     <button className="btn-primary create-btn" onClick={openCreateModal}>
                         <Plus size={18} /> Tạo mới
@@ -211,7 +212,7 @@ export default function Courses() {
                         
                         <div className="course-stats">
                             <span className="course-type-badge">
-                                {course.course_type === 'MANDATORY' ? 'Bắt buộc' : 'Tùy chọn'}
+                                {course.course_type === 'MANDATORY' ? 'Bắt buộc' : (course.course_type === 'PUBLIC' ? 'Công khai' : 'Tùy chọn')}
                             </span>
                         </div>
 
@@ -282,6 +283,7 @@ export default function Courses() {
                                     >
                                         <option value="MANDATORY">Bắt buộc</option>
                                         <option value="OPTIONAL">Tùy chọn</option>
+                                        <option value="PUBLIC">Công khai</option>
                                     </select>
                                 </div>
                             </div>

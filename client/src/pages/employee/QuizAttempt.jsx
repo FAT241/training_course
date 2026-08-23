@@ -76,7 +76,7 @@ export default function QuizAttempt() {
             <div style={{ backgroundColor: 'rgba(30, 41, 59, 0.7)', borderRadius: '16px', padding: '32px', backdropFilter: 'blur(10px)', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                 <div style={{ padding: '16px', backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', marginBottom: '32px', borderLeft: '4px solid #38bdf8' }}>
                     <p style={{ margin: 0, color: '#cbd5e1', fontSize: '15px' }}>
-                        Điểm yêu cầu để qua môn: <strong style={{ color: '#38bdf8', fontSize: '16px' }}>{quiz.passing_score}</strong> / {quiz.questions.length} câu. Hãy suy nghĩ cẩn thận trước khi chọn đáp án nhé!
+                        Điểm yêu cầu để qua môn: <strong style={{ color: '#38bdf8', fontSize: '16px' }}>{quiz.passing_score}%</strong> (Làm đúng tối thiểu {Math.ceil((quiz.passing_score / 100) * quiz.questions.length)} / {quiz.questions.length} câu). Hãy suy nghĩ cẩn thận trước khi chọn đáp án nhé!
                     </p>
                 </div>
 
@@ -148,7 +148,7 @@ export default function QuizAttempt() {
                         
                         <p style={{ fontSize: '16px', color: '#cbd5e1', marginBottom: '32px' }}>
                             Bạn làm đúng <strong style={{ color: 'white', fontSize: '20px' }}>{result.score}</strong> / {quiz.questions.length} câu. 
-                            (Yêu cầu: {result.passingScore} điểm)
+                            (Yêu cầu: {result.passingScore}%)
                         </p>
 
                         {result.newlyCertified && (

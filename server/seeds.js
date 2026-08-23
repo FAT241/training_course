@@ -72,7 +72,7 @@ async function seed() {
   // 5. Tạo Bài kiểm tra (Quiz) cho Chương 1
   const quizResult = await pool.query(`
         INSERT INTO quiz (chapter_id, passing_score)
-        VALUES ($1, 5) RETURNING id;
+        VALUES ($1, 50) RETURNING id;
     `, [chapterId]);
   const quizId = quizResult.rows[0].id;
 

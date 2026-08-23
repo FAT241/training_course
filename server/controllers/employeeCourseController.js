@@ -1,17 +1,17 @@
 const pool = require('../db');
 exports.getCourses = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const empResult = await
-            pool.query('SELECT department_id FROM employee WHERE user_id = $1',
-                [userId]);
-        if (empResult.rows.length === 0) {
-            return res.status(404).json({
-                message: 'Tài khoản không phải là nhân viên. '
-            });
-        }
-        const departmentId = empResult.rows[0].department_id;
-        const query = `
+  try {
+    const userId = req.user.id;
+    const empResult = await
+      pool.query('SELECT department_id FROM employee WHERE user_id = $1',
+        [userId]);
+    if (empResult.rows.length === 0) {
+      return res.status(404).json({
+        message: 'Tài khoản không phải là nhân viên. '
+      });
+    }
+    const departmentId = empResult.rows[0].department_id;
+    const query = `
         SELECT c.id, c.course_name,
         c.description, c.course_type,
         COALESCE(lp.completion_percentage, 0) as progress,
@@ -39,12 +39,12 @@ exports.getCourses = async (req, res) => {
       GROUP BY c.id, c.course_name, c.description, c.course_type, lp.completion_percentage
       ORDER BY c.id DESC;
     `;
-        const result = await pool.query(query, [userId, departmentId]);
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Lỗi lấy khóa học Employee:', error);
-        res.status(500).json({ message: 'Lỗi server' });
-    }
+    const result = await pool.query(query, [userId, departmentId]);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Lỗi lấy khóa học Employee:', error);
+    res.status(500).json({ message: 'Lỗi server' });
+  }
 };
 
 exports.getCourseDetails = async (req, res) => {
@@ -73,11 +73,11 @@ exports.getCourseDetails = async (req, res) => {
     const chapters = chaptersRes.rows;
 
     for (let chapter of chapters) {
-        const lessonsRes = await pool.query('SELECT id, lesson_name, content_type, file_path FROM lesson WHERE chapter_id = $1', [chapter.id]);
-        chapter.lessons = lessonsRes.rows;
-        
-        const quizRes = await pool.query('SELECT id, passing_score FROM quiz WHERE chapter_id = $1', [chapter.id]);
-        chapter.quiz = quizRes.rows.length > 0 ? quizRes.rows[0] : null;
+      const lessonsRes = await pool.query('SELECT id, lesson_name, content_type, file_path FROM lesson WHERE chapter_id = $1', [chapter.id]);
+      chapter.lessons = lessonsRes.rows;
+
+      const quizRes = await pool.query('SELECT id, passing_score FROM quiz WHERE chapter_id = $1', [chapter.id]);
+      chapter.quiz = quizRes.rows.length > 0 ? quizRes.rows[0] : null;
     }
 
     res.json({ ...course, chapters });
@@ -112,7 +112,7 @@ exports.submitQuiz = async (req, res) => {
   try {
     const userId = req.user.id;
     const quizId = req.params.id;
-    const { answers } = req.body; 
+    const { answers } = req.body;
 
     const empRes = await pool.query('SELECT user_id FROM employee WHERE user_id = $1', [userId]);
     if (empRes.rows.length === 0) return res.status(403).json({ message: 'Không có quyền' });
@@ -127,20 +127,21 @@ exports.submitQuiz = async (req, res) => {
     const totalQuestionsRes = await pool.query('SELECT count(*) as total FROM question WHERE quiz_id = $1', [quizId]);
     const totalQuestions = parseInt(totalQuestionsRes.rows[0].total) || 1;
 
-    // Tính điểm phần trăm (thang điểm 100)
-    const score = Math.round((rawScore / totalQuestions) * 100);
+    // Calculate percentage (0-100)
+    const percentageScore = Math.round((rawScore / totalQuestions) * 100);
 
     const quizRes = await pool.query('SELECT passing_score, chapter_id FROM quiz WHERE id = $1', [quizId]);
-    const passingScore = quizRes.rows[0].passing_score;
+    const passingScore = quizRes.rows[0].passing_score; // e.g. 50 (%)
     const chapterId = quizRes.rows[0].chapter_id;
-    const isPassed = score >= passingScore;
+    const isPassed = percentageScore >= passingScore;
 
     const chapterRes = await pool.query('SELECT course_id FROM chapter WHERE id = $1', [chapterId]);
     const courseId = chapterRes.rows[0].course_id;
 
+    // Save percentage in DB because progress calculation depends on qr.score >= q.passing_score
     await pool.query(
       'INSERT INTO quiz_result (score, time_taken, employee_id, quiz_id) VALUES ($1, 0, $2, $3)',
-      [score, employeeId, quizId]
+      [percentageScore, employeeId, quizId]
     );
 
     const totalQuizRes = await pool.query('SELECT count(*) as total FROM quiz q JOIN chapter c ON q.chapter_id = c.id WHERE c.course_id = $1', [courseId]);
@@ -149,13 +150,15 @@ exports.submitQuiz = async (req, res) => {
     const passedQuizRes = await pool.query('SELECT count(DISTINCT qr.quiz_id) as passed FROM quiz_result qr JOIN quiz q ON qr.quiz_id = q.id JOIN chapter c ON q.chapter_id = c.id WHERE qr.employee_id = $1 AND c.course_id = $2 AND qr.score >= q.passing_score', [employeeId, courseId]);
     const passedQuizzes = parseInt(passedQuizRes.rows[0].passed);
 
+
+    //Tinh % 
     const completionPercentage = totalQuizzes > 0 ? Math.round((passedQuizzes / totalQuizzes) * 100) : 0;
 
     await pool.query(`
       INSERT INTO learning_progress (completion_percentage, status, employee_id, course_id)
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (employee_id, course_id) 
-      DO UPDATE SET completion_percentage = $1, status = $2
+      DO UPDATE SET completion_percentage = $1, status = $2, updated_at = NOW()
     `, [completionPercentage, completionPercentage >= 100 ? 'COMPLETED' : 'IN_PROGRESS', employeeId, courseId]);
 
     let newlyCertified = false;
@@ -167,8 +170,7 @@ exports.submitQuiz = async (req, res) => {
         newlyCertified = true;
       }
     }
-
-    res.json({ score, passingScore, isPassed, completionPercentage, newlyCertified });
+    res.json({ score: rawScore, passingScore, isPassed, completionPercentage, newlyCertified });
   } catch (error) {
     console.error('Lỗi nộp bài quiz:', error);
     res.status(500).json({ message: 'Lỗi server' });

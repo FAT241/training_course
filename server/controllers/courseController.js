@@ -1,4 +1,6 @@
 const pool = require('../db');
+const fs = require('fs');
+const path = require('path');
 
 const getAll = async (req, res) => {
     try {
@@ -115,7 +117,7 @@ const removeChapter = async (req, res) => {
             JOIN quiz q ON qr.quiz_id = q.id
             WHERE q.chapter_id = $1 LIMIT 1
         `, [chapterId]);
-        
+
         if (checkResult.rows.length > 0) {
             return res.status(400).json({ message: 'Không thể xóa chương này vì đã có nhân viên tham gia học/kiểm tra.' });
         }
@@ -163,7 +165,22 @@ const addLesson = async (req, res) => {
 const removeLesson = async (req, res) => {
     const { lessonId } = req.params;
     try {
+        const lessonResult = await pool.query('SELECT file_path FROM lesson WHERE id = $1', [lessonId]);
+        if (lessonResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Không tìm thấy bài học' });
+        }
+        const filePath = lessonResult.rows[0].file_path;
+
         await pool.query('DELETE FROM lesson WHERE id = $1', [lessonId]);
+
+        // Dọn dẹp file vật lý
+        if (filePath && filePath.startsWith('/uploads/pdfs/')) {
+            const physicalPath = path.join(__dirname, '..', filePath);
+            if (fs.existsSync(physicalPath)) {
+                fs.unlinkSync(physicalPath);
+            }
+        }
+
         res.json({ message: 'Xóa bài học thành công' });
     } catch (err) {
         res.status(500).json({ message: 'Lỗi server', error: err.message });
@@ -174,14 +191,29 @@ const updateLesson = async (req, res) => {
     const { lessonId } = req.params;
     let { lesson_name, content_type, file_path } = req.body;
     try {
+        let oldFilePath = null;
         if (req.file) {
+            const lessonResult = await pool.query('SELECT file_path FROM lesson WHERE id = $1', [lessonId]);
+            if (lessonResult.rows.length > 0) {
+                oldFilePath = lessonResult.rows[0].file_path;
+            }
             file_path = '/uploads/pdfs/' + req.file.filename;
         }
+
         const result = await pool.query(
             'UPDATE lesson SET lesson_name=$1, content_type=$2, file_path=$3 WHERE id=$4 RETURNING *',
             [lesson_name, content_type, file_path || null, lessonId]
         );
         if (result.rows.length === 0) return res.status(404).json({ message: 'Không tìm thấy bài học' });
+
+        // Xóa file cũ nếu có upload file mới
+        if (req.file && oldFilePath && oldFilePath.startsWith('/uploads/pdfs/')) {
+            const physicalPath = path.join(__dirname, '..', oldFilePath);
+            if (fs.existsSync(physicalPath)) {
+                fs.unlinkSync(physicalPath);
+            }
+        }
+
         res.json(result.rows[0]);
     } catch (err) {
         res.status(500).json({ message: 'Lỗi server', error: err.message });

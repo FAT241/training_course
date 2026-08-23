@@ -151,7 +151,7 @@ export default function CourseDetail() {
             const formData = new FormData();
             formData.append('lesson_name', lessonForm.lesson_name);
             formData.append('content_type', lessonForm.content_type);
-            
+
             if (lessonForm.content_type === 'PDF' && lessonForm.file) {
                 formData.append('file', lessonForm.file);
             } else if (lessonForm.content_type === 'VIDEO') {
@@ -213,40 +213,50 @@ export default function CourseDetail() {
                 <h3 style={{ margin: '0 0 1rem 0', color: 'white', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={18} /> Phân quyền phòng ban
                 </h3>
-                <p style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '1rem' }}>Chỉ những phòng ban được cấp quyền dưới đây mới có thể thấy và học khóa học này.</p>
-                
-                <form onSubmit={handleAddPermission} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                        <select className="form-control" value={selectedDepartmentId} onChange={e => setSelectedDepartmentId(e.target.value)} style={{ width: '100%', borderRadius: '8px', padding: '0.7rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)', color: 'white', fontWeight: '500' }}>
-                            {departments.map(d => (
-                                <option key={d.id} value={d.id}>{d.department_name}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div style={{ width: '160px' }}>
-                        <select className="form-control" value={accessLevel} onChange={e => setAccessLevel(e.target.value)} style={{ width: '100%', borderRadius: '8px', padding: '0.7rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)', color: 'white', fontWeight: '500' }}>
-                            <option value="RESTRICTED">Bắt buộc học</option>
-                            <option value="OPTIONAL">Tùy chọn</option>
-                        </select>
-                    </div>
-                    <button type="submit" className="btn-primary" style={{ width: 'fit-content', padding: '0.7rem 1.5rem', borderRadius: '8px', whiteSpace: 'nowrap' }}>
-                        <Plus size={16} strokeWidth={3} /> Thêm Quyền
-                    </button>
-                </form>
 
-                <div className="permissions-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                    {course.permissions?.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Chưa có phòng ban nào được cấp quyền.</span>}
-                    {course.permissions?.map(perm => (
-                        <div key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', fontSize: '0.85rem', transition: 'all 0.2s', cursor: 'default' }} onMouseOver={e => e.currentTarget.style.backgroundColor='rgba(255, 255, 255, 0.2)'} onMouseOut={e => e.currentTarget.style.backgroundColor='rgba(255, 255, 255, 0.1)'}>
-                            <Building size={14} color="#94a3b8" />
-                            <span style={{ fontWeight: '600', color: 'white' }}>{perm.department_name}</span>
-                            <span style={{ color: '#cbd5e1', fontSize: '0.75rem', fontWeight: '600', padding: '2px 8px', backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>{perm.access_level}</span>
-                            <button type="button" onClick={() => handleRemovePermission(perm.department_id)} style={{ border: 'none', background: 'rgba(239, 68, 68, 0.2)', cursor: 'pointer', color: '#f87171', display: 'flex', padding: '4px', borderRadius: '50%', marginLeft: '4px', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background='rgba(239, 68, 68, 0.4)'} onMouseOut={e => e.currentTarget.style.background='rgba(239, 68, 68, 0.2)'}>
-                                <X size={12} strokeWidth={3} />
+                {course.course_type === 'PUBLIC' ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '10px' }}>
+                        <Shield size={20} color="#10b981" />
+                        <p style={{ color: '#6ee7b7', fontSize: '0.95rem', margin: 0, fontWeight: '500' }}>Đây là khóa học <strong>Công khai</strong> — tất cả nhân viên ở mọi phòng ban đều có thể truy cập mà không cần phân quyền.</p>
+                    </div>
+                ) : (
+                    <>
+                        <p style={{ color: '#cbd5e1', fontSize: '0.9rem', marginBottom: '1rem' }}>Chỉ những phòng ban được cấp quyền dưới đây mới có thể thấy và học khóa học này.</p>
+
+                        <form onSubmit={handleAddPermission} style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                                <select className="form-control" value={selectedDepartmentId} onChange={e => setSelectedDepartmentId(e.target.value)} style={{ width: '100%', borderRadius: '8px', padding: '0.7rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)', color: 'white', fontWeight: '500' }}>
+                                    {departments.map(d => (
+                                        <option key={d.id} value={d.id}>{d.department_name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div style={{ width: '160px' }}>
+                                <select className="form-control" value={accessLevel} onChange={e => setAccessLevel(e.target.value)} style={{ width: '100%', borderRadius: '8px', padding: '0.7rem 1rem', border: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(15, 23, 42, 0.5)', color: 'white', fontWeight: '500' }}>
+                                    <option value="RESTRICTED">Bắt buộc học</option>
+                                    <option value="OPTIONAL">Tùy chọn</option>
+                                </select>
+                            </div>
+                            <button type="submit" className="btn-primary" style={{ width: 'fit-content', padding: '0.7rem 1.5rem', borderRadius: '8px', whiteSpace: 'nowrap' }}>
+                                <Plus size={16} strokeWidth={3} /> Thêm Quyền
                             </button>
+                        </form>
+
+                        <div className="permissions-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                            {course.permissions?.length === 0 && <span style={{ color: '#94a3b8', fontSize: '0.9rem', fontStyle: 'italic' }}>Chưa có phòng ban nào được cấp quyền.</span>}
+                            {course.permissions?.map(perm => (
+                                <div key={perm.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', backgroundColor: 'rgba(255, 255, 255, 0.1)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '24px', fontSize: '0.85rem', transition: 'all 0.2s', cursor: 'default' }} onMouseOver={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'} onMouseOut={e => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}>
+                                    <Building size={14} color="#94a3b8" />
+                                    <span style={{ fontWeight: '600', color: 'white' }}>{perm.department_name}</span>
+                                    <span style={{ color: '#cbd5e1', fontSize: '0.75rem', fontWeight: '600', padding: '2px 8px', backgroundColor: 'rgba(15, 23, 42, 0.5)', borderRadius: '12px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>{perm.access_level}</span>
+                                    <button type="button" onClick={() => handleRemovePermission(perm.department_id)} style={{ border: 'none', background: 'rgba(239, 68, 68, 0.2)', cursor: 'pointer', color: '#f87171', display: 'flex', padding: '4px', borderRadius: '50%', marginLeft: '4px', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.4)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'}>
+                                        <X size={12} strokeWidth={3} />
+                                    </button>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </>
+                )}
             </div>
 
             <div className="chapters-list">
@@ -257,7 +267,7 @@ export default function CourseDetail() {
                         <div className="chapter-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '1rem', marginBottom: '1rem' }}>
                             <h3 style={{ margin: 0, color: 'white', fontSize: '1.1rem' }}>{chapter.chapter_name}</h3>
                             <div style={{ display: 'flex', gap: '8px' }}>
-                                <button onClick={() => openAddLessonModal(chapter.id)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.1)', border: 'none', borderRadius: '6px', color: 'white', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e=>e.currentTarget.style.background='rgba(255, 255, 255, 0.2)'} onMouseOut={e=>e.currentTarget.style.background='rgba(255, 255, 255, 0.1)'}><Plus size={14} /> Bài học</button>
+                                <button onClick={() => openAddLessonModal(chapter.id)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', gap: '6px', alignItems: 'center', background: 'rgba(255, 255, 255, 0.1)', border: 'none', borderRadius: '6px', color: 'white', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s' }} onMouseOver={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'} onMouseOut={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}><Plus size={14} /> Bài học</button>
                                 <button className="btn-primary" onClick={() => navigate(`/admin/chapters/${chapter.id}/quiz`)} style={{ fontSize: '0.85rem', padding: '0.4rem 0.8rem', display: 'flex', gap: '6px', alignItems: 'center', width: 'fit-content', borderRadius: '6px', background: 'linear-gradient(135deg, #10B981, #059669)', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.25)' }}><FileText size={14} /> Soạn Quiz</button>
                                 <button className="btn-yellow" onClick={() => openEditChapterModal(chapter)} style={{ padding: '0.4rem 0.6rem', borderRadius: '6px' }}><Edit size={14} /></button>
                                 <button className="btn-red" onClick={() => handleDeleteChapter(chapter.id)} style={{ padding: '0.4rem 0.6rem', borderRadius: '6px' }}><Trash2 size={14} /></button>
@@ -332,10 +342,10 @@ export default function CourseDetail() {
                                     <label>Loại nội dung</label>
                                     <select className="form-control" value={lessonForm.content_type} onChange={e => setLessonForm({ ...lessonForm, content_type: e.target.value })}>
                                         <option value="VIDEO">Video</option>
-                                        <option value="PDF">Tài liệu (PDF, Word)</option>
+                                        <option value="PDF">Tài liệu (PDF)</option>
                                     </select>
                                 </div>
-                                
+
                                 {lessonForm.content_type === 'VIDEO' && (
                                     <div className="form-group">
                                         <label>Đường dẫn Video (URL Youtube)</label>
@@ -351,7 +361,7 @@ export default function CourseDetail() {
                                         <input type="file" className="form-control" accept=".pdf"
                                             onChange={e => setLessonForm({ ...lessonForm, file: e.target.files[0] })} />
                                         {editingLesson && editingLesson.file_path && (
-                                            <small style={{display: 'block', marginTop: '5px', color: '#94a3b8'}}>Đã có file đính kèm. Chọn file mới để thay thế.</small>
+                                            <small style={{ display: 'block', marginTop: '5px', color: '#94a3b8' }}>Đã có file đính kèm. Chọn file mới để thay thế.</small>
                                         )}
                                     </div>
                                 )}

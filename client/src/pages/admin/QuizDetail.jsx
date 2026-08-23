@@ -310,7 +310,8 @@ export default function QuizDetail() {
                                                     value={ans.answer_content}
                                                     onChange={e => handleAnswerChange(ans.id, 'answer_content', e.target.value)}
                                                     style={{ 
-                                                        backgroundColor: 'white', 
+                                                        backgroundColor: 'white',
+                                                        color: '#1F2937',
                                                         border: ans.is_correct ? '1px solid #BBF7D0' : '1px solid #CBD5E1',
                                                         padding: '0.6rem 0.8rem'
                                                     }}

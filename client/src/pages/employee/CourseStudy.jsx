@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../../utils/api';
 import { PlayCircle, FileText, ChevronDown, ChevronRight, Award, ArrowLeft } from 'lucide-react';
+import PdfViewer from '../../components/PdfViewer';
 
 export default function CourseStudy() {
     const { id } = useParams();
@@ -94,11 +95,9 @@ export default function CourseStudy() {
                                     </video>
                                 )
                             ) : (
-                                <iframe 
+                                <PdfViewer 
                                     key={activeLesson.id}
-                                    src={getMediaUrl(activeLesson.file_path)} 
-                                    style={{ width: '100%', height: '100%', border: 'none', backgroundColor: '#fff' }}
-                                    title={activeLesson.lesson_name}
+                                    url={getMediaUrl(activeLesson.file_path)} 
                                 />
                             )}
                         </div>
